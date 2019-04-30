@@ -88,23 +88,13 @@ public class Node {
         return count;
     }
 
-    public boolean hasDependenyOn(Node node) {
-
-        if (dependencies.contains(node)) {
-            return true;
-        } else {
-            for (Node dependency : dependencies) {
-                try {
-                    if (dependency.hasDependenyOn(node)) {
-                        return true;
-                    }
-                } catch (StackOverflowError error) {
-                    System.out.println(dependency.getPackageName() + ", " + node.getPackageName());
-
-                }
+    public boolean hasDependencyOn(Node node) {
+        for (Node dependency : dependencies) {
+            if (dependency.packageName.contains(node.packageName)) {
+                return true;
             }
-            return true;
         }
+        return false;
     }
 
     @Override

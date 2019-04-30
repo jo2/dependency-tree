@@ -46,7 +46,6 @@ public class DependencyTree {
                     }
                 }
             }
-            root.getDependencies().addAll(child.getDependencies());
         }
         return root;
     }
@@ -103,14 +102,13 @@ public class DependencyTree {
             node.getChildren().sort(nodeComparator);
             int layer = 0;
             for (int i = 0; i < node.getChildren().size(); i++) {
-                if (i+1 < node.getChildren().size()) {
-                    if (nodeComparator.compare(node.getChildren().get(i), node.getChildren().get(i + 1)) != 0) {
+                for (int j = 0; j < node.getChildren().size(); j++) {
+                    if (!node.getChildren().get(i).hasDependencyOn(node.getChildren().get(j)) && !node.getChildren().get(j).hasDependencyOn(node.getChildren().get(i))) {
                         layer++;
+                        break;
                     }
-                    node.getChildren().get(i).setLayer(layer);
-                } else {
-                    node.getChildren().get(i).setLayer(++layer);
                 }
+                node.getChildren().get(i).setLayer(layer);
             }
             for (Node child : node.getChildren()) {
                 sortTree(child);
