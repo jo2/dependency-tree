@@ -1,19 +1,17 @@
 package org.wickedsource.coderadar.dependencytree;
 
-import com.google.gson.Gson;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DependencyTree {
+
+    private final static Logger LOGGER = Logger.getLogger(DependencyTree.class.getName());
 
     private String basepackage;
     private String basepackage_dot;
@@ -48,13 +46,9 @@ public class DependencyTree {
                     }
                 }
             }
-
+            root.getDependencies().addAll(child.getDependencies());
         }
         return root;
-    }
-
-    public void exportJSON(Node root, String path) throws IOException {
-        Files.write(Paths.get(path), new Gson().toJson(root).getBytes());
     }
 
     public List<String> getDependenciesFromFile(Node node) {
@@ -92,15 +86,36 @@ public class DependencyTree {
             }
         });
         for (File file : files) {
+            Node node = new Node(new LinkedList<>(), file.getPath(), file.getName(), root.getPackageName() + "." + file.getName());
+            root.getChildren().add(node);
             if (file.isDirectory()) {
-                Node node = new Node(new ArrayList<>(), file.getPath(), file.getName(), root.getPackageName() + "." + file.getName());
-                root.getChildren().add(node);
                 createTree(node);
-            } else {
-                root.getChildren().add(new Node(new ArrayList<>(), file.getPath(), file.getName(), root.getPackageName() + "." + file.getName()));
             }
         }
         return root;
+    }
+
+    public void sortTree(Node node) {
+        // for every Node
+        // sort children by count of dependencies and count of dependencies to siblings
+        if (node.hasChildren()) {
+            NodeComparator nodeComparator = new NodeComparator();
+            node.getChildren().sort(nodeComparator);
+            int layer = 0;
+            for (int i = 0; i < node.getChildren().size(); i++) {
+                if (i+1 < node.getChildren().size()) {
+                    if (nodeComparator.compare(node.getChildren().get(i), node.getChildren().get(i + 1)) != 0) {
+                        layer++;
+                    }
+                    node.getChildren().get(i).setLayer(layer);
+                } else {
+                    node.getChildren().get(i).setLayer(++layer);
+                }
+            }
+            for (Node child : node.getChildren()) {
+                sortTree(child);
+            }
+        }
     }
 
     public String printDirectoryTree(Node root) {

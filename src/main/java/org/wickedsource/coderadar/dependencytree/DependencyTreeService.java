@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -22,10 +22,12 @@ public class DependencyTreeService {
         File rootFile = new File(projectdir + BASEPACKAGE);
         if (rootFile.isDirectory()) {
 
-            BASEROOT = new Node(new ArrayList<>(), rootFile.getPath(), rootFile.getName(), BASEPACKAGE_DOT);
+            BASEROOT = new Node(new LinkedList<>(), rootFile.getPath(), rootFile.getName(), BASEPACKAGE_DOT);
             DependencyTree dependencyTree = new DependencyTree(BASEPACKAGE, BASEPACKAGE_DOT, BASEROOT);
             BASEROOT = dependencyTree.createTree(BASEROOT);
             BASEROOT = dependencyTree.setDependencies(BASEROOT);
+            BASEROOT.setDependencies(new LinkedList<>());
+            dependencyTree.sortTree(BASEROOT);
         }
         return BASEROOT;
     }

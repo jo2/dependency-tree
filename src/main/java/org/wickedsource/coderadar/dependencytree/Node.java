@@ -9,6 +9,7 @@ public class Node {
     private String packageName;
     private List<Node> children;
     private List<Node> dependencies;
+    private int layer;
 
     public Node(List<Node> children, String path, String filename, String packageName) {
         this.children = children;
@@ -77,6 +78,16 @@ public class Node {
         return null;
     }
 
+    public int countDependenciesOn(Node node) {
+        int count = 0;
+        for (Node dependency : dependencies) {
+            if (dependency.packageName.contains(node.packageName)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     public boolean hasDependenyOn(Node node) {
 
         if (dependencies.contains(node)) {
@@ -99,5 +110,13 @@ public class Node {
     @Override
     public String toString() {
         return packageName;
+    }
+
+    public int getLayer() {
+        return layer;
+    }
+
+    public void setLayer(int layer) {
+        this.layer = layer;
     }
 }
