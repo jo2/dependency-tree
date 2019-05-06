@@ -101,12 +101,14 @@ public class DependencyTree {
         if (node.hasChildren()) {
             NodeComparator nodeComparator = new NodeComparator();
             node.getChildren().sort(nodeComparator);
-            int layer = 0;
+            int layer;
             for (int i = 0; i < node.getChildren().size(); i++) {
+                layer = node.getChildren().size();
                 for (int j = 0; j < node.getChildren().size(); j++) {
-                    if (!node.getChildren().get(i).hasDependencyOn(node.getChildren().get(j)) && !node.getChildren().get(j).hasDependencyOn(node.getChildren().get(i))) {
-                        layer++;
-                        break;
+                    // if child[i] has dependencies on child[j]
+                    //   then child[i].layer < child[j].layer
+                    if (node.getChildren().get(i).hasDependencyOn(node.getChildren().get(j))) {
+                        layer--;
                     }
                 }
                 node.getChildren().get(i).setLayer(layer);
@@ -115,106 +117,5 @@ public class DependencyTree {
                 sortTree(child);
             }
         }
-    }
-
-    public String printDirectoryTree(Node root) {
-        int indent = 0;
-        StringBuilder sb = new StringBuilder();
-        printDirectoryTree(root, indent, sb);
-        return sb.toString();
-    }
-
-    private void printDirectoryTree(Node root, int indent, StringBuilder sb) {
-        sb.append(getIndentString(indent));
-        sb.append("+--");
-        sb.append(root.getFilename());
-        sb.append("/    ");
-        sb.append(root.getDependencies());
-        sb.append("\n");
-        for (Node child : root.getChildren()) {
-            if (child.hasChildren()) {
-                printDirectoryTree(child, indent + 1, sb);
-            } else {
-                printFile(child, indent + 1, sb);
-            }
-        }
-
-    }
-
-    private void printFile(Node node, int indent, StringBuilder sb) {
-        sb.append(getIndentString(indent));
-        sb.append("+--");
-        sb.append(node.getFilename() + ";    " + node.getDependencies());
-        sb.append("\n");
-    }
-
-    private String getIndentString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < indent; i++) {
-            sb.append("|  ");
-        }
-        return sb.toString();
-    }
-
-
-//    _______________________________________________________________________________________________________
-
-
-
-
-
-
-
-    public String printDependencyTree(Node root) {
-        int indent = 0;
-        StringBuilder sb = new StringBuilder();
-        printDependencyTree(root, indent, sb);
-        return sb.toString();
-    }
-
-    private void printDependencyTree(Node root, int indent, StringBuilder sb) {
-        sb.append(getIndentString(indent));
-        sb.append("+--");
-        //TODO condition under which dependencies shall be displayed next to each other
-
-        sb.append(root.getFilename());
-
-        if (!root.hasDependencies() && root.hasChildren()) {
-            sb.append("/");
-            sb.append("\n");
-            for (Node child : root.getChildren()) {
-                if (child.hasChildren()) {
-                    printDependencyTree(child, indent + 1, sb);
-                } else {
-                    printDependencyTree(child, indent + 1, sb);
-                }
-            }
-        } else {
-            sb.append(" -> ");
-            sb.append(root.getDependencies());
-            sb.append("\n");
-            for (Node dependency : root.getDependencies()) {
-                if (dependency.hasDependencies()) {
-                    printDependencyTree(dependency, indent + 1, sb);
-                } else {
-                    printDependency(dependency, indent + 1, sb);
-                }
-            }
-        }
-    }
-
-    private void printDependency(Node node, int indent, StringBuilder sb) {
-        sb.append(getDependencyIndentString(indent));
-        sb.append("+--");
-        sb.append(node.getPackageName());
-        sb.append("\n");
-    }
-
-    private String getDependencyIndentString(int indent) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < indent; i++) {
-            sb.append("|  ");
-        }
-        return sb.toString();
     }
 }
