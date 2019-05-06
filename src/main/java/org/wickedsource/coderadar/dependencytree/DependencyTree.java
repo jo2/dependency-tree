@@ -46,6 +46,7 @@ public class DependencyTree {
                     }
                 }
             }
+            root.getDependencies().addAll(child.getDependencies());
         }
         return root;
     }
