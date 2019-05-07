@@ -5,13 +5,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DependencyTree {
-
-    private final static Logger LOGGER = Logger.getLogger(DependencyTree.class.getName());
 
     private String basepackage;
     private String basepackage_dot;
@@ -28,15 +25,35 @@ public class DependencyTree {
             if (child.hasChildren()) {
                 setDependencies(child);
             } else {
+                // org.wickedsource.coderadar.security.domain.*;
+                // in org.wickedsource.coderadar.user.rest.UserController;
+                System.out.println(child.getPackageName() + ": " + getDependenciesFromFile(child));
                 for (String dependency : getDependenciesFromFile(child)) {
-                    String dependencyString = dependency.replace(".", "/") + ".java";
+                    String dependencyString = dependency.replace(".", "/");
+                    if (!dependency.matches("[a-zA-Z.]*\\*")) {
+                         dependencyString += ".java";
+                    }
                     dependencyString = dependencyString.substring(dependencyString.lastIndexOf(basepackage) + basepackage.length() + 1);
                     String[] pathParts = dependencyString.split("/");
+
+                    /*if (dependency.matches("[a-zA-Z.]*\\*")) {
+                        for (String pathPart : pathParts) {
+                            System.out.print(pathPart + ", ");
+
+                        }
+                        System.out.println();
+                    }*/
                     Node currentNode = baseroot;
                     for (String pathPart : pathParts) {
                         if (currentNode != null) {
                             if (currentNode.hasChildren()) {
-                                currentNode = currentNode.getChildByName(pathPart);
+                                // if pathPart contains wildcard
+                                //   add all children as dependency
+                                if (pathPart.equals("*")) {
+                                    child.getDependencies().addAll(currentNode.getChildren());
+                                } else {
+                                    currentNode = currentNode.getChildByName(pathPart);
+                                }
                             }
                         }
                     }
@@ -55,12 +72,12 @@ public class DependencyTree {
         try {
             if (!node.hasChildren()) {
                 String content = new String(Files.readAllBytes(Paths.get(node.getPath())));
-                Matcher importMatcher = Pattern.compile("import [a-zA-Z.]*[a-zA-Z];").matcher(content);
+                Matcher importMatcher = Pattern.compile("import [a-zA-Z.]*([a-zA-Z]|\\*);").matcher(content);
                 List<String> imports = new ArrayList<>();
                 while (importMatcher.find()) {
                     String dependency = importMatcher.group();
                     if (dependency.contains(basepackage_dot)) {
-                        Matcher dependencyMatcher = Pattern.compile(" ([a-zA-Z]+.)*[a-zA-Z]").matcher(dependency);
+                        Matcher dependencyMatcher = Pattern.compile(" ([a-zA-Z]+.)*([a-zA-Z]|\\*)").matcher(dependency);
                         dependencyMatcher.find();
                         imports.add(dependencyMatcher.group().substring(1));
                     }
