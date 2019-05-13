@@ -177,6 +177,9 @@ public class DependencyTree {
             }
         });
         for (File file : files) {
+            if (!file.isDirectory() && !file.getName().endsWith(".java")) {
+                continue;
+            }
             Node node = new Node(new LinkedList<>(), file.getPath(), file.getName(), root.getPackageName() + "." + file.getName());
             root.getChildren().add(node);
             if (file.isDirectory()) {
