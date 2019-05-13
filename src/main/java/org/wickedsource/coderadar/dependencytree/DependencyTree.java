@@ -96,11 +96,11 @@ public class DependencyTree {
     }
 
     /**
-     * analyze the file of a given Node object for fully qualified class name usage dependencies
+     * analyze the file of a given Node object for fully qualified class name usage dependencies. helper method for setDependencies(Node node)
      * @param node Node to analyze
      * @return List of package and file names the current node has dependencies on
      */
-    public List<String> getClassQualifierDependencies(Node node) {
+    private List<String> getClassQualifierDependencies(Node node) {
         try {
             if (!node.hasChildren()) {
                 List<String> imports = new ArrayList<>();
@@ -130,11 +130,11 @@ public class DependencyTree {
     }
 
     /**
-     * analyze the file of a given Node object for import and wildcard import dependencies
+     * analyze the file of a given Node object for import and wildcard import dependencies. helper method for setDependencies(Node node)
      * @param node Node to analyze
      * @return List of package and file names the current node has dependencies on
      */
-    public List<String> getDependenciesFromFile(Node node) {
+    private List<String> getDependenciesFromFile(Node node) {
         try {
             if (!node.hasChildren()) {
                 String content = new String(Files.readAllBytes(Paths.get(node.getPath())));
@@ -159,6 +159,11 @@ public class DependencyTree {
         return null;
     }
 
+    /**
+     * create DependencyTree from file system recursively
+     * @param root current root Node which's children are created
+     * @return current Node with its children
+     */
     public Node createTree(Node root) {
         File rootFile = new File(root.getPath());
         File[] files = Objects.requireNonNull(rootFile.listFiles());
@@ -181,27 +186,121 @@ public class DependencyTree {
         return root;
     }
 
+    /**
+     * sort the children of a given Node object and their children recursively:
+     * if o1 has a dependency on o2 and o2 does not have an dependency on o1
+     *   return -1
+     * else if o2 has a dependency on o1 and o1 does not have an dependency on o2
+     *   return 1
+     * else if o1 has more dependencies on o2 than o2 on o1
+     *   return -1
+     * else if o2 has more dependencies on o1 than o1 on o2
+     *   return 1
+     * else if o1 has more dependencies than o2
+     *   return -1
+     * else if o2 has more dependencies than o1
+     *   return 1
+     * else
+     *   return 0
+     * @param node Node object which's children are to sort
+     */
     public void sortTree(Node node) {
-        // for every Node
-        // sort children by count of dependencies and count of dependencies to siblings
         if (node.hasChildren()) {
             NodeComparator nodeComparator = new NodeComparator();
-            node.getChildren().sort(nodeComparator);
-            int layer;
-            for (int i = 0; i < node.getChildren().size(); i++) {
-                layer = node.getChildren().size();
-                for (int j = 0; j < node.getChildren().size(); j++) {
-                    // if child[i] has dependencies on child[j]
-                    //   then child[i].layer < child[j].layer
-                    if (node.getChildren().get(i).hasDependencyOn(node.getChildren().get(j))) {
-                        layer--;
-                    }
-                }
-                node.getChildren().get(i).setLayer(layer);
-            }
             for (Node child : node.getChildren()) {
                 sortTree(child);
             }
+            node.getChildren().sort(nodeComparator);
         }
+    }
+
+    /**
+     * Set the display layer of a given Node object's children and their children recursively
+     * @param node Node object which children's display layer is set
+     */
+    public void setLayer(Node node) {
+        int layer = 0;
+        for (int i = 0; i < node.getChildren().size(); i++) {
+            // for every child in the current layer check
+            for (int j = 0; j < i; j++) {
+                if (node.getChildren().get(j).getLayer() == layer) {
+                    // if a child in the current layer has a dependency on the child[i] and child[i] has no dependency on it
+                    // or a child in the current row has more dependencies on the child[i] than the child[i] has on it
+                    if (node.getChildren().get(j).hasDependencyOn(node.getChildren().get(i)) && !node.getChildren().get(i).hasDependencyOn(node.getChildren().get(j))) {
+                        // raise row
+                        layer++;
+                    } else if (node.getChildren().get(j).countDependenciesOn(node.getChildren().get(i)).size() > node.getChildren().get(i).countDependenciesOn(node.getChildren().get(j)).size()) {
+                        // raise layer
+                        layer++;
+                    }
+                }
+            }
+            node.getChildren().get(i).setLayer(layer);
+            setLayer(node.getChildren().get(i));
+        }
+    }
+
+    /**
+     * toString method for DependencyTree. Overridden for testing purposes.
+     * @return DependencyTree object.toString()
+     */
+    @Override
+    public String toString() {
+        Node node = baseroot;
+        if (!node.hasChildren()) {
+            throw new IllegalArgumentException("folder is not a Directory");
+        }
+        int indent = 0;
+        StringBuilder sb = new StringBuilder();
+        printDirectoryTree(node, indent, sb);
+        return sb.toString();
+    }
+
+    /**
+     * helper method for toString()
+     */
+    private void printDirectoryTree(Node node, int indent, StringBuilder sb) {
+        if (!node.hasChildren()) {
+            throw new IllegalArgumentException("folder is not a Directory");
+        }
+        sb.append(getIndentString(indent));
+        sb.append("+--");
+        sb.append(node.getFilename());
+        sb.append(": ");
+        sb.append(node.getLayer());
+        sb.append("; ");
+        sb.append(node.getDependencies());
+        sb.append("/");
+        sb.append("\n");
+        for (Node child : node.getChildren()) {
+            if (child.hasChildren()) {
+                printDirectoryTree(child, indent + 1, sb);
+            } else {
+                printFile(child, indent + 1, sb);
+            }
+        }
+    }
+
+    /**
+     * helper method for toString()
+     */
+    private void printFile(Node node, int indent, StringBuilder sb) {
+        sb.append(getIndentString(indent));
+        sb.append("+--");
+        sb.append(node.getFilename());
+        sb.append(": ");
+        sb.append(node.getLayer());
+        sb.append("\n");
+    }
+
+    /**
+     * helper method for toString()
+     */
+    private String getIndentString(int indent) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < indent; i++) {
+            sb.append("|  ");
+        }
+        return sb.toString();
     }
 }

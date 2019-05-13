@@ -28,6 +28,7 @@ public class DependencyTreeService {
             BASEROOT = dependencyTree.setDependencies(BASEROOT);
             BASEROOT.setDependencies(new LinkedList<>());
             dependencyTree.sortTree(BASEROOT);
+            dependencyTree.setLayer(BASEROOT);
         }
         return BASEROOT;
     }
