@@ -22,10 +22,11 @@ public class DependencyTree {
 
     /**
      * set all dependencies for a given Node object including fully qualified class name usages, imports and wildcard imports
+     *
      * @param root Node object to set dependencies for
      * @return Node which has its dependencies set
      */
-    public Node setDependencies(Node root) {
+    public void setDependencies(Node root) {
         for (Node child : root.getChildren()) {
             if (child.hasChildren()) {
                 setDependencies(child);
@@ -35,7 +36,7 @@ public class DependencyTree {
                     String dependencyString = dependency.replace(".", "/");
                     // if import is not a wildcard import add .java to it to find the file
                     if (!dependency.matches("[a-zA-Z.]*\\*")) {
-                         dependencyString += ".java";
+                        dependencyString += ".java";
                     }
                     // remove the basepackage name from dependency to find file(s) in same package
                     dependencyString = dependencyString.substring(dependencyString.lastIndexOf(basepackage) + basepackage.length() + 1);
@@ -59,7 +60,7 @@ public class DependencyTree {
                         }
                     }
                     // if there is no wildcard in dependencyString add the last child found as dependency
-                    if (currentNode != null && !pathParts[pathParts.length-1].equals("*")) {
+                    if (currentNode != null && !pathParts[pathParts.length - 1].equals("*")) {
                         child.getDependencies().add(currentNode);
                     }
                 }
@@ -92,11 +93,11 @@ public class DependencyTree {
             // add all file dependencies to the current package; done for structuring purposes
             root.getDependencies().addAll(child.getDependencies());
         }
-        return root;
     }
 
     /**
      * analyze the file of a given Node object for fully qualified class name usage dependencies. helper method for setDependencies(Node node)
+     *
      * @param node Node to analyze
      * @return List of package and file names the current node has dependencies on
      */
@@ -109,21 +110,25 @@ public class DependencyTree {
                     //   if pattern is not in a single or multi line comment
                     //   if pattern is not in a string
                     //   if pattern is not in an import or the package name
-                    Matcher importMatcher = Pattern.compile("^(?!(import|package|\\s*//|\\s*/\\*|\\s*\\*|.*\")).*([a-zA-Z]+\\.)+[a-zA-Z]+(?!\\($)").matcher(content);
+                    Matcher importMatcher = Pattern.compile("^(?!(.*import|.*package|\\s*//|\\s*/\\*|\\s*\\*|.*\")).*([a-zA-Z]+\\.)+[a-zA-Z]+(?!\\($)").matcher(content);
                     if (importMatcher.lookingAt()) {
                         String dependency = importMatcher.group();
                         // if it is an import from the current project
                         if (dependency.contains(basepackage_dot)) {
                             // extract packageName.fileName from matched region
                             Matcher dependencyMatcher = Pattern.compile("([a-zA-Z]+\\.)+[a-zA-Z]+").matcher(dependency);
-                            dependencyMatcher.find();
-                            imports.add(dependencyMatcher.group());
+                            if (dependencyMatcher.find()) {
+                                String foundDependency = dependencyMatcher.group();
+                                if (!imports.contains(foundDependency)) {
+                                    imports.add(foundDependency);
+                                }
+                            }
                         }
                     }
                 }
                 return imports;
             }
-        } catch(IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
@@ -131,29 +136,44 @@ public class DependencyTree {
 
     /**
      * analyze the file of a given Node object for import and wildcard import dependencies. helper method for setDependencies(Node node)
+     *
      * @param node Node to analyze
      * @return List of package and file names the current node has dependencies on
      */
     private List<String> getDependenciesFromFile(Node node) {
         try {
             if (!node.hasChildren()) {
-                String content = new String(Files.readAllBytes(Paths.get(node.getPath())));
-                // find all regions with an import statement
-                Matcher importMatcher = Pattern.compile("import [a-zA-Z.]*([a-zA-Z]|\\*);").matcher(content);
                 List<String> imports = new ArrayList<>();
-                while (importMatcher.find()) {
-                    String dependency = importMatcher.group();
-                    // if it is an import from the current project
-                    if (dependency.contains(basepackage_dot)) {
-                        // extract packageName.fileName from matched region
-                        Matcher dependencyMatcher = Pattern.compile(" ([a-zA-Z]+.)*([a-zA-Z]|\\*)").matcher(dependency);
-                        dependencyMatcher.find();
-                        imports.add(dependencyMatcher.group().substring(1));
+                for (String content : Files.readAllLines(Paths.get(node.getPath()))) {
+                    // found the end of the area where import statements are valid
+                    //   if the line does not begin with a single or multi line comment
+                    //   if the line does not begin with an import statement
+                    //   if the line is not empty or not only contains whitespaces
+                    //   if the line is not the package declaration
+                    Matcher classMatcher = Pattern.compile("^(?!(\\s*import|\\s*$|\\s*//|\\s*/\\*|\\s*\\*|\\s*package))").matcher(content);
+                    if (classMatcher.find()) {
+                        break;
+                    }
+                    // find all regions with an import statement
+                    Matcher importMatcher = Pattern.compile("^(?!(\\s*//|\\s*/\\*|\\s*\\*|.*\"))import ([a-zA-Z]+\\.)+([a-zA-Z]+|\\*);").matcher(content);
+                    while (importMatcher.find()) {
+                        String dependency = importMatcher.group();
+                        // if it is an import from the current project
+                        if (dependency.contains(basepackage_dot)) {
+                            // extract packageName.fileName from matched region
+                            Matcher dependencyMatcher = Pattern.compile(" ([a-zA-Z]+.)*([a-zA-Z]|\\*)").matcher(dependency);
+                            if (dependencyMatcher.find()) {
+                                String foundDependency = dependencyMatcher.group().substring(1);
+                                if (!imports.contains(foundDependency)) {
+                                    imports.add(foundDependency);
+                                }
+                            }
+                        }
                     }
                 }
                 return imports;
             }
-        } catch(IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return null;
@@ -161,10 +181,11 @@ public class DependencyTree {
 
     /**
      * create DependencyTree from file system recursively
+     *
      * @param root current root Node which's children are created
      * @return current Node with its children
      */
-    public Node createTree(Node root) {
+    public void createTree(Node root) {
         File rootFile = new File(root.getPath());
         File[] files = Objects.requireNonNull(rootFile.listFiles());
         Arrays.sort(files, (f1, f2) -> {
@@ -186,25 +207,28 @@ public class DependencyTree {
                 createTree(node);
             }
         }
-        return root;
     }
 
     /**
      * sort the children of a given Node object and their children recursively:
      * if o1 has a dependency on o2 and o2 does not have an dependency on o1
-     *   return -1
+     *   o1 is before o2
      * else if o2 has a dependency on o1 and o1 does not have an dependency on o2
-     *   return 1
+     *   o2 is before o1
      * else if o1 has more dependencies on o2 than o2 on o1
-     *   return -1
+     *   o1 is before o2
      * else if o2 has more dependencies on o1 than o1 on o2
-     *   return 1
+     *   o2 is before o1
      * else if o1 has more dependencies than o2
-     *   return -1
+     *   o1 is before o2
      * else if o2 has more dependencies than o1
-     *   return 1
-     * else
-     *   return 0
+     *   o2 is before o1
+     * else if o1 is a directory and o2 is not
+     *   o1 is before o2
+     * else if o2 is a directory and o1 is not
+     *   o2 is before o1
+     * else compare o1 and o2 lexically
+     *
      * @param node Node object which's children are to sort
      */
     public void sortTree(Node node) {
@@ -219,6 +243,7 @@ public class DependencyTree {
 
     /**
      * Set the display layer of a given Node object's children and their children recursively
+     *
      * @param node Node object which children's display layer is set
      */
     public void setLayer(Node node) {
@@ -245,6 +270,7 @@ public class DependencyTree {
 
     /**
      * toString method for DependencyTree. Overridden for testing purposes.
+     *
      * @return DependencyTree object.toString()
      */
     @Override
