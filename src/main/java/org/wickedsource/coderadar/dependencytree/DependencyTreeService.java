@@ -24,10 +24,11 @@ public class DependencyTreeService {
 
             BASEROOT = new Node(new LinkedList<>(), rootFile.getPath(), rootFile.getName(), BASEPACKAGE_DOT);
             DependencyTree dependencyTree = new DependencyTree(BASEPACKAGE, BASEPACKAGE_DOT, BASEROOT);
-            BASEROOT = dependencyTree.createTree(BASEROOT);
-            BASEROOT = dependencyTree.setDependencies(BASEROOT);
+            dependencyTree.createTree(BASEROOT);
+            dependencyTree.setDependencies(BASEROOT);
             BASEROOT.setDependencies(new LinkedList<>());
             dependencyTree.sortTree(BASEROOT);
+            dependencyTree.setLayer(BASEROOT);
         }
         return BASEROOT;
     }

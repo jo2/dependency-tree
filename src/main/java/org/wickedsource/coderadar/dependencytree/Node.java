@@ -17,6 +17,7 @@ public class Node {
         this.filename = filename;
         this.packageName = packageName;
         dependencies = new ArrayList<>();
+        this.layer = -1;
     }
 
     public List<Node> getChildren() {
@@ -78,23 +79,34 @@ public class Node {
         return null;
     }
 
-    public int countDependenciesOn(Node node) {
-        int count = 0;
-        for (Node dependency : dependencies) {
-            if (dependency.packageName.contains(node.packageName)) {
-                count++;
+    public List<String> countDependenciesOn(Node node) {
+        // create list which contains all dependencies and sub dependencies on @node
+        List<String> counter = new ArrayList<>();
+        // if @this is not already in that list
+        if (!counter.contains(this.packageName)) {
+            for (Node dependency : dependencies) {
+                // add this to the dependency list
+                // check if @this has a dependency on @node
+                // if @this is a file and @node is a file or @this is a folder and @node is a file
+                //   dependency.equals
+                // else if @this is a file and @node is a folder or @this is a folder and @node is a folder
+                //   dependency.contains(@node.packageName)
+                if (!this.hasChildren() && !node.hasChildren() || this.hasChildren() && !node.hasChildren()) {
+                    if (dependency.equals(node)) {
+                        counter.add(this.packageName);
+                    }
+                } else if (!this.hasChildren() && node.hasChildren() || this.hasChildren() && node.hasChildren()) {
+                    if (dependency.getPackageName().contains(node.getPackageName())) {
+                        counter.add(this.packageName);
+                    }
+                }
             }
         }
-        return count;
+        return counter;
     }
 
     public boolean hasDependencyOn(Node node) {
-        for (Node dependency : dependencies) {
-            if (dependency.packageName.contains(node.packageName)) {
-                return true;
-            }
-        }
-        return false;
+        return !countDependenciesOn(node).isEmpty();
     }
 
     @Override
@@ -108,5 +120,17 @@ public class Node {
 
     public void setLayer(int layer) {
         this.layer = layer;
+    }
+
+    public void incrementLayer() {
+        this.layer++;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof Node) {
+            return this.packageName.equals(((Node)obj).packageName);
+        }
+        return false;
     }
 }
