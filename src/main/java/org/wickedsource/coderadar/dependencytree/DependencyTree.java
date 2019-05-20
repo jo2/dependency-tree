@@ -103,7 +103,7 @@ public class DependencyTree {
      */
     private List<String> getClassQualifierDependencies(Node node) {
         try {
-            if (!node.hasChildren()) {
+            if (!node.hasChildren() && node.getFilename().endsWith(".java")) {
                 List<String> imports = new ArrayList<>();
                 for (String content : Files.readAllLines(Paths.get(node.getPath()))) {
                     // dependency found if string.string.... pattern is matched and
@@ -142,7 +142,7 @@ public class DependencyTree {
      */
     private List<String> getDependenciesFromFile(Node node) {
         try {
-            if (!node.hasChildren()) {
+            if (!node.hasChildren() && node.getFilename().endsWith(".java")) {
                 List<String> imports = new ArrayList<>();
                 for (String content : Files.readAllLines(Paths.get(node.getPath()))) {
                     // found the end of the area where import statements are valid
