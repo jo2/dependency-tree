@@ -131,7 +131,7 @@ public class DependencyTree {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return null;
+        return Collections.EMPTY_LIST;
     }
 
     /**
@@ -176,7 +176,7 @@ public class DependencyTree {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return null;
+        return Collections.EMPTY_LIST;
     }
 
     /**
