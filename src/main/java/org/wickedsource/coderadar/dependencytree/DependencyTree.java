@@ -50,7 +50,10 @@ public class DependencyTree {
                             if (currentNode.hasChildren()) {
                                 // if dependencyString contains a wildcard add all children as dependencies and stop here
                                 if (pathParts[i].equals("*")) {
-                                    child.getDependencies().addAll(currentNode.getChildren());
+                                    currentNode.getChildren().stream().filter(
+                                            wildcardDependency -> !child.getDependencies().contains(wildcardDependency)
+                                    )
+                                            .forEach(wildcardDependency -> child.getDependencies().add(wildcardDependency));
                                     break;
                                 } else {
                                     // continue iteration
@@ -60,7 +63,7 @@ public class DependencyTree {
                         }
                     }
                     // if there is no wildcard in dependencyString add the last child found as dependency
-                    if (currentNode != null && !pathParts[pathParts.length - 1].equals("*")) {
+                    if (currentNode != null && !pathParts[pathParts.length - 1].equals("*") && !child.getDependencies().contains(currentNode)) {
                         child.getDependencies().add(currentNode);
                     }
                 }
@@ -105,12 +108,13 @@ public class DependencyTree {
         try {
             if (!node.hasChildren() && node.getFilename().endsWith(".java")) {
                 List<String> imports = new ArrayList<>();
-                for (String content : Files.readAllLines(Paths.get(node.getPath()))) {
+                String[] lines = clearFileContent(new String(Files.readAllBytes(Paths.get(node.getPath())))).split("\n");
+                for (String content : lines) {
                     // dependency found if string.string.... pattern is matched and
                     //   if pattern is not in a single or multi line comment
                     //   if pattern is not in a string
                     //   if pattern is not in an import or the package name
-                    Matcher importMatcher = Pattern.compile("^(?!(.*import|.*package|\\s*//|\\s*/\\*|\\s*\\*|.*\")).*([a-zA-Z]+\\.)+[a-zA-Z]+(?!\\($)").matcher(content);
+                    Matcher importMatcher = Pattern.compile("^(?!(.*\\simport|.*\\spackage|\\s*//|\\s*/\\*|\\s*\\*|.*\")).*(([A-Za-z_$][A-Za-z_$0-9]*)\\.)+([A-Za-z_$][A-Za-z_$0-9]*)(?!\\($)").matcher(content);
                     if (importMatcher.lookingAt()) {
                         String dependency = importMatcher.group();
                         // if it is an import from the current project
@@ -144,7 +148,8 @@ public class DependencyTree {
         try {
             if (!node.hasChildren() && node.getFilename().endsWith(".java")) {
                 List<String> imports = new ArrayList<>();
-                for (String content : Files.readAllLines(Paths.get(node.getPath()))) {
+                String[] lines = clearFileContent(new String(Files.readAllBytes(Paths.get(node.getPath())))).split("\n");
+                for (String content : lines) {
                     // found the end of the area where import statements are valid
                     //   if the line does not begin with a single or multi line comment
                     //   if the line does not begin with an import statement
@@ -155,7 +160,7 @@ public class DependencyTree {
                         break;
                     }
                     // find all regions with an import statement
-                    Matcher importMatcher = Pattern.compile("^(?!(\\s*//|\\s*/\\*|\\s*\\*|.*\"))import ([a-zA-Z]+\\.)+([a-zA-Z]+|\\*);").matcher(content);
+                    Matcher importMatcher = Pattern.compile("^(?!(\\s*//|\\s*/\\*|\\s*\\*|.*\"))import (([A-Za-z_$][A-Za-z_$0-9]*)\\.)+(([A-Za-z_$][A-Za-z_$0-9]*)|\\*);").matcher(content);
                     while (importMatcher.find()) {
                         String dependency = importMatcher.group();
                         // if it is an import from the current project
@@ -177,6 +182,15 @@ public class DependencyTree {
             e.printStackTrace();
         }
         return Collections.EMPTY_LIST;
+    }
+
+    /**
+     * remove comments from a given fileContent
+     * @param fileContent fieContent to clear
+     * @return cleared fileContent
+     */
+    private String clearFileContent(final String fileContent) {
+        return fileContent.replaceAll("(\\/\\*(.|[\\r\\n])+?\\*\\/)|(\\/\\/.*[\\r\\n])", "");
     }
 
     /**
