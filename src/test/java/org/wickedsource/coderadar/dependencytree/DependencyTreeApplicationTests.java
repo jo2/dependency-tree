@@ -4,7 +4,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.LinkedList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -52,6 +56,7 @@ public class DependencyTreeApplicationTests {
     private Node InvalidDependencyTest;
     private Node DuplicateDependenciesTest;
     private Node DuplicateDependencies2Test;
+    private Node FullyClassifiedDependencyTest;
 
     private Node WildcardImport1Test;
     private Node WildcardImport2Test;
@@ -80,6 +85,7 @@ public class DependencyTreeApplicationTests {
         assertNotNull(DuplicateDependenciesTest     = somepackage.getChildByName("DuplicateDependenciesTest.java"));
         assertNotNull(DuplicateDependencies2Test    = somepackage.getChildByName("DuplicateDependencies2Test.java"));
         assertNotNull(InvalidDependencyTest         = somepackage.getChildByName("InvalidDependencyTest.java"));
+        assertNotNull(FullyClassifiedDependencyTest = somepackage.getChildByName("FullyClassifiedDependencyTest.java"));
 
         assertNotNull(WildcardImport1Test                   = wildcardpackage.getChildByName("WildcardImport1Test.java"));
         assertNotNull(WildcardImport2Test                   = wildcardpackage.getChildByName("WildcardImport2Test.java"));
@@ -138,6 +144,7 @@ public class DependencyTreeApplicationTests {
         assertTrue(CoreTest.hasDependencyOn(WildcardImport1Test));
         assertTrue(CoreTest.hasDependencyOn(WildcardImport2Test));
         assertTrue(CoreTest.hasDependencyOn(WildcardImportCircularDependencyTest));
+        assertTrue(CoreTest.hasDependencyOn(FullyClassifiedDependencyTest));
         assertEquals(4,CoreTest.getDependencies().size());
 
         //circular dependencies
