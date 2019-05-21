@@ -20,7 +20,8 @@ public class DependencyTreeApplicationTests {
 
     @Before
     public void init(){
-        String projectdir = "C:/Users/vossgaetter/Documents/repos/dependency-tree/src/test/resources/testSrc/";
+        String userdir = System.getProperty("user.dir");
+        String projectdir = userdir+"/src/test/resources/testSrc/";
         File rootFile = new File(projectdir + BASEPACKAGE);
         assertTrue("specified test directory doesn't exist",rootFile.exists());
         if (rootFile.isDirectory()) {
@@ -31,30 +32,30 @@ public class DependencyTreeApplicationTests {
     }
 
     private void createTree(){
-        BASEROOT = dependencyTree.createTree(BASEROOT);
+        dependencyTree.createTree(BASEROOT);
     }
 
     private void setDependencies(){
-        BASEROOT = dependencyTree.setDependencies(BASEROOT);
+        dependencyTree.setDependencies(BASEROOT);
     }
 
 
-    Node emptypackage;
-    Node somepackage;
-    Node wildcardpackage;
-    Node CoreTest;
-    Node NotASourceFile;
+    private Node emptypackage;
+    private Node somepackage;
+    private Node wildcardpackage;
+    private Node CoreTest;
+    private Node NotASourceFile;
 
-    Node CircularDependencyTest;
-    Node CoreDependency;
-    Node NotADependencyTest;
-    Node InvalidDependencyTest;
-    Node DuplicateDependenciesTest;
-    Node DuplicateDependencies2Test;
+    private Node CircularDependencyTest;
+    private Node CoreDependency;
+    private Node NotADependencyTest;
+    private Node InvalidDependencyTest;
+    private Node DuplicateDependenciesTest;
+    private Node DuplicateDependencies2Test;
 
-    Node WildcardImport1Test;
-    Node WildcardImport2Test;
-    Node WildcardImportCircularDependencyTest;
+    private Node WildcardImport1Test;
+    private Node WildcardImport2Test;
+    private Node WildcardImportCircularDependencyTest;
 
     private void createTreeTest() {
         createTree();
@@ -62,7 +63,7 @@ public class DependencyTreeApplicationTests {
         assertEquals("Incorrect package name on basepackage",BASEROOT.getPackageName(),BASEPACKAGE_DOT);
         assertEquals("Incorrect file name on basepackage",BASEROOT.getFilename(),"test");
         assertTrue("Incorrect path on basepackage",BASEROOT.getPath().endsWith(BASEPACKAGE.replace("/","\\")));
-        assertTrue("Incorrect number of children in basepackage",BASEROOT.getChildren().size()==new File(BASEROOT.getPath()).listFiles().length);
+        assertEquals("Incorrect number of children in basepackage",4,BASEROOT.getChildren().size());
 
         //Testing for node existence
 
@@ -70,7 +71,7 @@ public class DependencyTreeApplicationTests {
         assertNotNull(somepackage       = BASEROOT.getChildByName("somepackage"));
         assertNotNull(wildcardpackage   = BASEROOT.getChildByName("wildcardpackage"));
         assertNotNull(CoreTest          = BASEROOT.getChildByName("CoreTest.java"));
-        assertNull("Not a valid java source file therfore",
+        assertNull("Not a valid java source file therefore",
                 NotASourceFile          = BASEROOT.getChildByName("NotASourceFile.txt"));
 
         assertNotNull(CircularDependencyTest        = somepackage.getChildByName("CircularDependencyTest.java"));
@@ -85,13 +86,26 @@ public class DependencyTreeApplicationTests {
         assertNotNull(WildcardImportCircularDependencyTest  = wildcardpackage.getChildByName("WildcardImportCircularDependencyTest.java"));
     }
 
-    private boolean compare(Node o1, Node o2) {
-        if (o1.hasDependencyOn(o2)) {
-            return false;
+    private int compare(Node o1, Node o2) {
+        if (o1.hasDependencyOn(o2) && !o2.hasDependencyOn(o1)) {
+            return -1;
+        } else if (o2.hasDependencyOn(o1) && !o1.hasDependencyOn(o2)) {
+            return 1;
+        } else if (o1.countDependenciesOn(o2).size() > o2.countDependenciesOn(o1).size()) {
+            return -1;
+        } else if (o1.countDependenciesOn(o2).size() < o2.countDependenciesOn(o1).size()) {
+            return 1;
         } else if (o1.getDependencies().size() > o2.getDependencies().size()) {
-            return false;
+            return -1;
+        } else if (o1.getDependencies().size() < o2.getDependencies().size()) {
+            return 1;
+        } else if (o1.hasChildren() && !o2.hasChildren()) {
+            return -1;
+        } else if (!o1.hasChildren() && o2.hasChildren()) {
+            return 1;
+        } else {
+            return o1.getFilename().compareTo(o2.getFilename());
         }
-        return true;
     }
 
     private boolean checkOrderRecursive(Node currentNode){
@@ -99,7 +113,7 @@ public class DependencyTreeApplicationTests {
             Node childBefore = null;
             for (Node child : currentNode.getChildren()){
                 if(childBefore!=null){
-                    if(!compare(childBefore,child)){
+                    if(compare(childBefore,child)>0){
                         return false;
                     }
                 }
