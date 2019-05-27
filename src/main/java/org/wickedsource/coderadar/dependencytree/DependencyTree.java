@@ -13,11 +13,14 @@ public class DependencyTree {
     private String basepackage;
     private String basepackage_dot;
     private Node baseroot;
+    private RegexPatternCache cache;
 
     public DependencyTree(String basepackage, String basepackage_dot, Node baseroot) {
         this.basepackage = basepackage;
         this.basepackage_dot = basepackage_dot;
         this.baseroot = baseroot;
+        cache = new RegexPatternCache();
+
     }
 
     /**
@@ -114,7 +117,7 @@ public class DependencyTree {
                     //   if pattern is not in a single or multi line comment
                     //   if pattern is not in a string
                     //   if pattern is not in an import or the package name
-                    Matcher importMatcher = Pattern.compile("^(?!(.*\\simport|.*\\spackage|\\s*//|\\s*/\\*|\\s*\\*|.*\")).*(([A-Za-z_$][A-Za-z_$0-9]*)\\.)+([A-Za-z_$][A-Za-z_$0-9]*)(?!\\($)").matcher(content);
+                    Matcher importMatcher = cache.getPattern("^(?!(.*\\simport|.*\\spackage|\\s*//|\\s*/\\*|\\s*\\*|.*\")).*(([A-Za-z_$][A-Za-z_$0-9]*)\\.)+([A-Za-z_$][A-Za-z_$0-9]*)(?!\\($)").matcher(content);
                     if (importMatcher.lookingAt()) {
                         String dependency = importMatcher.group();
                         // if it is an import from the current project
@@ -155,18 +158,18 @@ public class DependencyTree {
                     //   if the line does not begin with an import statement
                     //   if the line is not empty or not only contains whitespaces
                     //   if the line is not the package declaration
-                    Matcher classMatcher = Pattern.compile("^(?!(\\s*import|\\s*$|\\s*//|\\s*/\\*|\\s*\\*|\\s*package))").matcher(content);
+                    Matcher classMatcher = cache.getPattern("^(?!(\\s*import|\\s*$|\\s*//|\\s*/\\*|\\s*\\*|\\s*package))").matcher(content);
                     if (classMatcher.find()) {
                         break;
                     }
                     // find all regions with an import statement
-                    Matcher importMatcher = Pattern.compile("^(?!(\\s*//|\\s*/\\*|\\s*\\*|.*\"))import (([A-Za-z_$][A-Za-z_$0-9]*)\\.)+(([A-Za-z_$][A-Za-z_$0-9]*)|\\*);").matcher(content);
+                    Matcher importMatcher = cache.getPattern("^(?!(\\s*//|\\s*/\\*|\\s*\\*|.*\"))import (([A-Za-z_$][A-Za-z_$0-9]*)\\.)+(([A-Za-z_$][A-Za-z_$0-9]*)|\\*);").matcher(content);
                     while (importMatcher.find()) {
                         String dependency = importMatcher.group();
                         // if it is an import from the current project
                         if (dependency.contains(basepackage_dot)) {
                             // extract packageName.fileName from matched region
-                            Matcher dependencyMatcher = Pattern.compile(" ([a-zA-Z]+.)*([a-zA-Z]|\\*)").matcher(dependency);
+                            Matcher dependencyMatcher = cache.getPattern(" ([a-zA-Z]+.)*([a-zA-Z]|\\*)").matcher(dependency);
                             if (dependencyMatcher.find()) {
                                 String foundDependency = dependencyMatcher.group().substring(1);
                                 if (!imports.contains(foundDependency)) {
