@@ -1,5 +1,8 @@
 package org.wickedsource.coderadar.dependencytree;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +20,7 @@ public class DependencyTreeService {
     private static Node BASEROOT;
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE, value = "/getTree")
-    public Node getDependencyTree() {
+    public String getDependencyTree() {
         String projectdir = "C:/Users/teklote/Documents/git/coderadar/coderadar-server/coderadar-core/src/main/java/";
         File rootFile = new File(projectdir + BASEPACKAGE);
         if (rootFile.isDirectory()) {
@@ -30,6 +33,18 @@ public class DependencyTreeService {
             dependencyTree.sortTree(BASEROOT);
             dependencyTree.setLayer(BASEROOT);
         }
-        return BASEROOT;
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addSerializer(Node.class,new NodeSerializer());
+        objectMapper.registerModule(simpleModule);
+        try {
+            String serialized = objectMapper.writeValueAsString(BASEROOT);
+            return serialized;
+        }catch (JsonProcessingException e){
+            e.printStackTrace();
+        }
+
+        return null;
     }
 }
