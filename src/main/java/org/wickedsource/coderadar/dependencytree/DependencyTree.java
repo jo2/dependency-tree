@@ -376,7 +376,6 @@ public class DependencyTree {
                     }
                 }
             }
-            System.out.println(node.getChildren().get(i));
             node.getChildren().get(i).setLayer(layer);
             setLayer(node.getChildren().get(i));
         }

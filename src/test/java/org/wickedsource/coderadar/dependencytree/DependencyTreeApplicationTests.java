@@ -1,5 +1,8 @@
 package org.wickedsource.coderadar.dependencytree;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -155,6 +158,22 @@ public class DependencyTreeApplicationTests {
 
         //circular wildcard dependencies
         assertTrue(WildcardImportCircularDependencyTest.hasDependencyOn(CoreTest));
+    }
+
+    @Test
+    public void serializeToJsonTest(){
+        createTree();
+        setDependencies();
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            SimpleModule simpleModule = new SimpleModule();
+            simpleModule.addSerializer(Node.class,new NodeSerializer());
+            objectMapper.registerModule(simpleModule);
+            String serialized = objectMapper.writeValueAsString(BASEROOT);
+            System.out.println("test");
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
     }
 
     @Test
