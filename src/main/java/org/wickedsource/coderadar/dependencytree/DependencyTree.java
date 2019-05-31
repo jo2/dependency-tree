@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class DependencyTree {
 
@@ -20,7 +21,6 @@ public class DependencyTree {
         this.basepackage_dot = basepackage_dot;
         this.baseroot = baseroot;
         cache = new RegexPatternCache();
-
     }
 
     /**
@@ -44,31 +44,14 @@ public class DependencyTree {
                     // remove the basepackage name from dependency to find file(s) in same package
                     dependencyString = dependencyString.substring(dependencyString.lastIndexOf(basepackage) + basepackage.length() + 1);
                     String[] pathParts = dependencyString.split("/");
-
-                    Node currentNode = baseroot;
                     // iterate through all children til the package and filename matches the dependencyString
 
-                    for (int i = 0; i < pathParts.length; i++) {
-                        if (currentNode != null) {
-                            if (currentNode.hasChildren()) {
-                                // if dependencyString contains a wildcard add all children as dependencies and stop here
-                                if (pathParts[i].equals("*")) {
-                                    currentNode.getChildren().stream().filter(
-                                            wildcardDependency -> !child.getDependencies().contains(wildcardDependency)
-                                    )
-                                            .forEach(wildcardDependency -> child.getDependencies().add(wildcardDependency));
-                                    break;
-                                } else {
-                                    // continue iteration
-                                    currentNode = currentNode.getChildByName(pathParts[i]);
-                                }
-                            }
-                        }
-                    }
-                    // if there is no wildcard in dependencyString add the last child found as dependency
-                    if (currentNode != null && !pathParts[pathParts.length - 1].equals("*") && !child.getDependencies().contains(currentNode)) {
-                        child.getDependencies().add(currentNode);
-                    }
+//                    System.out.println("Find dependencies for: " + child.getPackageName() + "; dependencyString: " + dependencyString);
+                    List<Node> foundDependencies = findPackageNameInModules(pathParts, baseroot);
+                    foundDependencies.stream().filter(
+                            wildcardDependency -> !child.getDependencies().contains(wildcardDependency)
+                    )
+                            .forEach(wildcardDependency -> child.getDependencies().add(wildcardDependency));
                 }
                 // get all dependencies for fully qualified class usage, ignoring:
                 //   import declarations
@@ -76,24 +59,18 @@ public class DependencyTree {
                 //   single line comments
                 //   multi line comments
                 //   strings
+                // TODO
                 for (String qualifiedDependency : getClassQualifierDependencies(child)) {
                     // add .java to find the file
                     String dependencyString = qualifiedDependency.replace(".", "/") + ".java";
                     // remove the basepackage name from dependency to find file(s) in same package
                     dependencyString = dependencyString.substring(dependencyString.lastIndexOf(basepackage) + basepackage.length() + 1);
                     String[] pathParts = dependencyString.split("/");
-                    Node currentNode = baseroot;
-
-                    for (String pathPart : pathParts) {
-                        if (currentNode != null) {
-                            if (currentNode.hasChildren()) {
-                                currentNode = currentNode.getChildByName(pathPart);
-                            }
-                        }
-                    }
-                    if (currentNode != null && !child.getDependencies().contains(currentNode)) {
-                        child.getDependencies().add(currentNode);
-                    }
+                    List<Node> foundDependencies = findPackageNameInModules(pathParts, baseroot);
+                    foundDependencies.stream().filter(
+                            wildcardDependency -> !child.getDependencies().contains(wildcardDependency)
+                    )
+                            .forEach(wildcardDependency -> child.getDependencies().add(wildcardDependency));
                 }
             }
             // add all file dependencies to the current package; done for structuring purposes
@@ -196,6 +173,65 @@ public class DependencyTree {
         return fileContent.replaceAll("(\\/\\*(.|[\\r\\n])+?\\*\\/)|(\\/\\/.*[\\r\\n])", "");
     }
 
+    private List<Node> findPackageNameInModules(String[] packageName, Node root) {
+        // List nodes
+        // if root is a module
+        //   go through every child of root
+        //     if the child is a package
+        //       if first part of packageName fits child.filename
+        //         add goThroughPackageTree(packageName, child) to nodes
+        //       else skip
+        //     else if the child is a module
+        //       add recursive to nodes
+        //   return nodes
+        // else if root is package
+        //   add goThroughPackageTree(packageName, root) to nodes
+        // return nodes
+
+        List<Node> nodes = new LinkedList<>();
+        if (root.getPackageName().equals("")) {
+            for (Node child : root.getChildren()) {
+                if (!child.getPackageName().equals("")) {
+                    if (child.getFilename().equals(packageName[0])) {
+//                        System.out.println("gotThroughPackageTree: " + Arrays.toString(packageName) + "; " + child);
+                        nodes.addAll(gotThroughPackageTree(packageName, child));
+                    }
+                } else {
+                    nodes.addAll(findPackageNameInModules(packageName, child));
+                }
+            }
+        } else {
+            nodes.addAll(gotThroughPackageTree(packageName, root));
+        }
+        return nodes;
+    }
+
+    private List<Node> gotThroughPackageTree(String[] packageName, Node root) {
+        Node currentNode = root;
+        for (int i = 1; i < packageName.length; i++) {
+            if (currentNode != null) {
+                if (currentNode.hasChildren()) {
+//                    System.out.println("iterate: " + packageName[i] + "; " + currentNode.getChildren());
+                    // if dependencyString contains a wildcard add all children as dependencies and stop here
+                    if (packageName[i].equals("*")) {
+//                        System.out.println(currentNode.getChildren());
+                        return currentNode.getChildren();
+                    } else {
+                        if (currentNode.getChildByName(packageName[i]) != null) {
+//                            System.out.println("child with that name found");
+                            currentNode = currentNode.getChildByName(packageName[i]);
+                        } else {
+//                            System.out.println("child not found -> wrong package");
+                            return Collections.EMPTY_LIST;
+                        }
+                    }
+                }
+            }
+        }
+//        System.out.println(currentNode);
+        return Collections.singletonList(currentNode);
+    }
+
     /**
      * create DependencyTree from file system recursively
      *
@@ -214,14 +250,74 @@ public class DependencyTree {
                 return f1.compareTo(f2);
             }
         });
-        for (File file : files) {
-            if (!file.isDirectory() && !file.getName().endsWith(".java")) {
-                continue;
+        List<String> fileNames = Arrays.stream(files).map(File::getName).collect(Collectors.toList());
+        if (fileNames.contains("src")) {
+            for (File file : files) {
+                if (file.getName().equals("src")) {
+                    System.out.println(file + ", " + Arrays.toString(files));
+                    // check if there is a child with 'src/main/java/{basepackage}'
+                    String packagePath = "/main/java/" + basepackage;
+                    File childToContinue = new File(file.getPath() + packagePath);
+                    if (childToContinue.exists()) {
+                        for (File f : Objects.requireNonNull(childToContinue.listFiles())) {
+                            // if such a file exists use it instead of the current file
+                            String packageName = (root.getPackageName().equals("") ? f.getName() : root.getPackageName() + "." + f.getName());
+
+                            Node packageSkipNode = new Node(new LinkedList<>(), f.getPath(), f.getName(), packageName);
+                            if (f.isDirectory()) {
+                                createTree(packageSkipNode);
+                            }
+                            if (!packageSkipNode.getFilename().endsWith(".java") && packageSkipNode.getChildren().isEmpty()) {
+                                continue;
+                            }
+                            root.getChildren().add(packageSkipNode);
+                            continue;
+                        }
+                    } else {
+                        Node node;
+                        if (file.getPath().contains("src/main/java") || file.getPath().contains("src\\main\\java")) {
+                            node = new Node(new LinkedList<>(), file.getPath(), file.getName(), root.getPackageName() + "." + file.getName());
+                        } else {
+                            node = new Node(new LinkedList<>(), file.getPath(), file.getName(), "");
+                        }
+                        if (file.isDirectory()) {
+                            createTree(node);
+                        }
+                        if (!node.getFilename().endsWith(".java") && node.getChildren().isEmpty()) {
+                            continue;
+                        }
+                        root.getChildren().add(node);
+                    }
+                }
             }
-            Node node = new Node(new LinkedList<>(), file.getPath(), file.getName(), root.getPackageName() + "." + file.getName());
-            root.getChildren().add(node);
-            if (file.isDirectory()) {
-                createTree(node);
+        } else {
+            for (File file : files) {
+                // skip file if file is
+                //   a non java file
+                //   a hidden package (beginning with a '.')
+                //   an output package (named 'build', 'out', or 'classes')
+                //   a node_modules directory
+                Matcher forbiddenDirs = cache.getPattern("(^\\.|build|out|classes|node_modules)").matcher(file.getName());
+                if (!file.isDirectory() && !file.getName().endsWith(".java") || forbiddenDirs.find()) {
+                    continue;
+                }
+
+                // if filename equals src
+                //   check if children with src/main/java exist
+
+                Node node;
+                if (file.getPath().contains("src/main/java") || file.getPath().contains("src\\main\\java")) {
+                    node = new Node(new LinkedList<>(), file.getPath(), file.getName(), root.getPackageName() + "." + file.getName());
+                } else {
+                    node = new Node(new LinkedList<>(), file.getPath(), file.getName(), "");
+                }
+                if (file.isDirectory()) {
+                    createTree(node);
+                }
+                if (!node.getFilename().endsWith(".java") && node.getChildren().isEmpty()) {
+                    continue;
+                }
+                root.getChildren().add(node);
             }
         }
     }
@@ -280,6 +376,7 @@ public class DependencyTree {
                     }
                 }
             }
+            System.out.println(node.getChildren().get(i));
             node.getChildren().get(i).setLayer(layer);
             setLayer(node.getChildren().get(i));
         }

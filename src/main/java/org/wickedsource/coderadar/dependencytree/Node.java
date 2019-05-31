@@ -111,7 +111,7 @@ public class Node {
 
     @Override
     public String toString() {
-        return packageName;
+        return packageName + ", " + layer;
     }
 
     public int getLayer() {
