@@ -83,22 +83,21 @@ public class Node {
         // create list which contains all dependencies and sub dependencies on @node
         List<String> counter = new ArrayList<>();
         // if @this is not already in that list
-        if (!counter.contains(this.packageName)) {
-            for (Node dependency : dependencies) {
-                // add this to the dependency list
-                // check if @this has a dependency on @node
-                // if @this is a file and @node is a file or @this is a folder and @node is a file
-                //   dependency.equals
-                // else if @this is a file and @node is a folder or @this is a folder and @node is a folder
-                //   dependency.contains(@node.packageName)
-                if (!this.hasChildren() && !node.hasChildren() || this.hasChildren() && !node.hasChildren()) {
-                    if (dependency.equals(node)) {
-                        counter.add(this.packageName);
-                    }
-                } else if (!this.hasChildren() && node.hasChildren() || this.hasChildren() && node.hasChildren()) {
-                    if (dependency.getPackageName().contains(node.getPackageName())) {
-                        counter.add(this.packageName);
-                    }
+        for (Node dependency : dependencies) {
+            // add this to the dependency list
+            // check if @this has a dependency on @node
+            // if @this is a file and @node is a file or @this is a folder and @node is a file
+            //   dependency.equals
+            // else if @this is a file and @node is a folder or @this is a folder and @node is a folder
+            //   dependency.contains(@node.packageName)
+            if (!this.hasChildren() && !node.hasChildren() || this.hasChildren() && !node.hasChildren()) {
+                if (dependency.equals(node)) {
+                    counter.add(this.packageName.equals("") ? this.filename : this.packageName);
+                }
+            } else if (!this.hasChildren() && node.hasChildren() || this.hasChildren() && node.hasChildren()) {
+                if (dependency.getPackageName().contains(node.getPackageName().equals("") ? node.getFilename() : node.getPackageName()) ||
+                        dependency.getPath().contains((node.getPackageName().equals("") ? node.getFilename() : node.getPackageName()).replaceAll("\\.", "/"))) {
+                    counter.add(this.packageName.equals("") ? this.filename : this.packageName);
                 }
             }
         }
@@ -111,7 +110,7 @@ public class Node {
 
     @Override
     public String toString() {
-        return packageName + ", " + layer;
+        return packageName.equals("") ? filename : packageName;
     }
 
     public int getLayer() {
@@ -129,7 +128,7 @@ public class Node {
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof Node) {
-            return this.packageName.equals(((Node)obj).packageName);
+            return this.path.equals(((Node)obj).path);
         }
         return false;
     }

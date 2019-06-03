@@ -59,7 +59,6 @@ public class DependencyTree {
                 //   single line comments
                 //   multi line comments
                 //   strings
-                // TODO
                 for (String qualifiedDependency : getClassQualifierDependencies(child)) {
                     // add .java to find the file
                     String dependencyString = qualifiedDependency.replace(".", "/") + ".java";
@@ -193,7 +192,6 @@ public class DependencyTree {
             for (Node child : root.getChildren()) {
                 if (!child.getPackageName().equals("")) {
                     if (child.getFilename().equals(packageName[0])) {
-//                        System.out.println("gotThroughPackageTree: " + Arrays.toString(packageName) + "; " + child);
                         nodes.addAll(gotThroughPackageTree(packageName, child));
                     }
                 } else {
@@ -211,24 +209,19 @@ public class DependencyTree {
         for (int i = 1; i < packageName.length; i++) {
             if (currentNode != null) {
                 if (currentNode.hasChildren()) {
-//                    System.out.println("iterate: " + packageName[i] + "; " + currentNode.getChildren());
                     // if dependencyString contains a wildcard add all children as dependencies and stop here
                     if (packageName[i].equals("*")) {
-//                        System.out.println(currentNode.getChildren());
                         return currentNode.getChildren();
                     } else {
                         if (currentNode.getChildByName(packageName[i]) != null) {
-//                            System.out.println("child with that name found");
                             currentNode = currentNode.getChildByName(packageName[i]);
                         } else {
-//                            System.out.println("child not found -> wrong package");
                             return Collections.EMPTY_LIST;
                         }
                     }
                 }
             }
         }
-//        System.out.println(currentNode);
         return Collections.singletonList(currentNode);
     }
 
@@ -254,7 +247,6 @@ public class DependencyTree {
         if (fileNames.contains("src")) {
             for (File file : files) {
                 if (file.getName().equals("src")) {
-                    System.out.println(file + ", " + Arrays.toString(files));
                     // check if there is a child with 'src/main/java/{basepackage}'
                     String packagePath = "/main/java/" + basepackage;
                     File childToContinue = new File(file.getPath() + packagePath);
