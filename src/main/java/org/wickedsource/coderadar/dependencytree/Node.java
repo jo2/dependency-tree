@@ -127,8 +127,19 @@ public class Node {
 
     @Override
     public boolean equals(Object obj) {
+        // @this equals @obj if
+        //   @obj is a Node-object and
+        //   @this.filename equals @obj.filename and
+        //   @this.packageName equals @obj.packageName and
+        //   @this.path equals @obj.path and
+        //   @this.dependencies equals @obj.dependencies and
+        //   @this.children equals @obj.children and
         if (obj instanceof Node) {
-            return this.path.equals(((Node)obj).path);
+            return this.filename.equals(((Node) obj).getFilename()) &&
+                    this.packageName.equals(((Node) obj).getPackageName()) &&
+                    this.path.equals(((Node) obj).path) &&
+                    this.children.equals(((Node) obj).getChildren()) &&
+                    this.dependencies.equals(((Node) obj).getDependencies());
         }
         return false;
     }
